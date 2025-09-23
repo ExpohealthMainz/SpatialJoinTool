@@ -1,11 +1,11 @@
 # Load necessary libraries
 library(sf)
 library(terra)
-library(tools) # For file_path_sans_ext
-library(dplyr) # For data manipulation, especially mutate and select
+library(tools) 
+library(dplyr)
+library(rmarkdown)
 
 # --- Main Function to Perform All Spatial Appends ---
-# attributes_to_transfer is now a character vector
 perform_all_spatial_appends <- function(point_layer_path, raster_folders, polygon_folders, attributes_to_transfer) {
   
   # --- 1. Setup Paths and Load Initial Point Layer ---
@@ -26,7 +26,7 @@ perform_all_spatial_appends <- function(point_layer_path, raster_folders, polygo
     stop("Error: Point layer is invalid or empty.")
   }
   
-  # --- IMPORTANT CHANGE: Drop M (and Z if desired) dimensions from point layer ---
+  # Drop M (and Z if desired) dimensions from point layer
   # st_zm(drop = TRUE) will drop the M dimension. If it's XYZM, it becomes XYZ.
   # If you want to force 2D (XY) even if Z is present, use st_zm(drop = TRUE, what = "ZM").
   # For point features and spatial joins, XY is usually sufficient.
@@ -70,7 +70,7 @@ perform_all_spatial_appends <- function(point_layer_path, raster_folders, polygo
           next
         }
 
-        # --- IMPORTANT CHANGE FOR MISSING RASTER CRS ---
+        # Check for missing Raster Coordinate Reference System
         raster_crs_info <- crs(raster_to_sample, describe = TRUE) # Get detailed CRS info
 
         if (is.na(raster_crs_info$code) || raster_crs_info$code == "" || raster_crs_info$code == "undef") { # Check for 'undef' as well
@@ -156,7 +156,7 @@ perform_all_spatial_appends <- function(point_layer_path, raster_folders, polygo
       }
       folder_base_name <- basename(current_polygon_folder) # Get the folder name
       
-      # Adjusted to also look for .gpkg files for polygons
+      # Checking for *.shp and *.gpkg file formats regarding polygon input
       polygon_files <- list.files(current_polygon_folder, pattern = "\\.shp$|\\.gpkg$", full.names = TRUE)
       
       if (length(polygon_files) == 0) {
@@ -176,7 +176,7 @@ perform_all_spatial_appends <- function(point_layer_path, raster_folders, polygo
           next
         }
         
-        # --- IMPORTANT CHANGE: Drop M (and Z if desired) dimensions from polygon layer ---
+        # Drop M (and Z if desired) dimensions from polygon layer
         polygon_layer <- st_zm(polygon_layer, drop = TRUE) 
         
         # Ensure CRS matches
@@ -284,34 +284,35 @@ perform_all_spatial_appends <- function(point_layer_path, raster_folders, polygo
 point_layer_path_1 <- 'D:/Gesundheitsdaten_3_R/Daten/Mainz-Bingen/Fassadenpunkte_corrected.gpkg'
 raster_folders_1 <- c('D:/Gesundheitsdaten_3_R/Daten/Fluglärm/', 'D:/Gesundheitsdaten_3_R/Daten/OtherRasterData/') # Can be one or multiple folders
 polygon_folders_1 <- c('D:/Gesundheitsdaten_3_R/Daten/Klimprax/', 'D:/Gesundheitsdaten_3_R/Daten/OtherVectorData/') # Can be one or multiple folders
-# Now attributes_to_transfer is a VECTOR of column names
+# attributes_to_transfer is a vector of column names to be transferred
+# However, the names are checked for each layer, which can be problematic for large amounts of filesets and duplicate column names
 attributes_to_transfer_1 <- c("GRID_CODE", "GEN", "plz_code")  
 
 # Case 2: Strasse
 point_layer_path_2 <- 'D:/Gesundheitsdaten_3_R/Daten/Mainz/strasse_2022_corrected.gpkg'
 raster_folders_2 <- c('D:/Gesundheitsdaten_3_R/Daten/Fluglärm/', 'D:/Gesundheitsdaten_3_R/Daten/OtherRasterData/') # Can be one or multiple folders
 polygon_folders_2 <- c('D:/Gesundheitsdaten_3_R/Daten/Klimprax/', 'D:/Gesundheitsdaten_3_R/Daten/OtherVectorData/', 'D:/Gesundheitsdaten_3_R/Daten/Mainz_VectorData/') # Can be one or multiple folders
-# Now attributes_to_transfer is a VECTOR of column names
+# attributes_to_transfer is a vector of column names to be transferred, which can be problematic for large amounts of filesets and duplicate column names
 attributes_to_transfer_2 <- c("GRID_CODE", "GEN", "plz_code", "LP1", "LP2", "LP3", "LP4")  
 
 
 # --- Execute the Combined Function ---
-message("\n### Processing Fassadenpunkte ###")
+message("\n### Processing Fassadenpunkte (Mainz-Bingen) ###")
 final_fassadenpunkte_layer <- perform_all_spatial_appends(
   point_layer_path = point_layer_path_1,
   raster_folders = raster_folders_1,
   polygon_folders = polygon_folders_1,
-  attributes_to_transfer = attributes_to_transfer_1 # Pass the vector of attributes
+  attributes_to_transfer = attributes_to_transfer_1
 )
 
-message("\n### Processing Strasse ###")
+message("\n### Processing Strasse (Mainz) ###")
 final_strasse_layer <- perform_all_spatial_appends(
   point_layer_path = point_layer_path_2,
   raster_folders = raster_folders_2,
   polygon_folders = polygon_folders_2,
-  attributes_to_transfer = attributes_to_transfer_2 # Pass the vector of attributes
+  attributes_to_transfer = attributes_to_transfer_2 
 )
 
 # You can still use 'final_fassadenpunkte_layer' and 'final_strasse_layer'
 # as sf objects in R for further spatial analysis if needed,
-# even though the primary output is now CSV.
+# even though the primary output is CSV.
